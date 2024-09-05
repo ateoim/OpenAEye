@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenAEye: keep it open</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background-color: #000;
+        color: #00ff00;
+        overflow-y: auto; /* Enable vertical scrolling */
+        min-height: 100vh; /* Ensure the body takes at least the full viewport height */
+        margin: 0; /* Remove default body margin */
+        padding-top: 0; /* Remove padding as navbar will be hidden by default */
+      }
+      #matrix-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+      }
+      .content {
+        position: relative;
+        z-index: 1;
+        padding-top: 20px;
+        padding-bottom: 50px; /* Add some padding at the bottom to ensure scrollability */
+      }
+      #game-area {
+        display: flex;
+        justify-content: center;
+        margin-top: 50px;
+      }
+      .eye {
+        width: 300px;
+        height: 300px;
+        cursor: pointer;
+        background-color: white;
+        border-radius: 50%;
+        padding: 10px;
+        transition: box-shadow 0.3s ease;
+      }
+      .eye.score-effect {
+        animation: pulse 0.5s ease-in-out;
+        box-shadow: 0 0 20px 10px rgba(0, 255, 0, 0.7);
+      }
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      #score,
+      #timer,
+      #high-score {
+        font-size: 24px;
+        margin: 20px 0;
+      }
+      #start-button {
+        font-size: 20px;
+        padding: 10px 20px;
+        margin-top: 20px;
+        background-color: #00ff00;
+        color: #000;
+        border: none;
+        cursor: pointer;
+      }
+      #instruction {
+        font-size: 18px;
+        margin: 20px 0;
+      }
+      /* Navbar styles */
+      .navbar {
+        background-color: #001a00;
+        overflow: hidden;
+        position: fixed;
+        top: -50px; /* Hide the navbar by default */
+        left: 0;
+        width: 100%;
+        z-index: 1000;
+        height: 50px;
+        border-bottom: 1px solid #00ff00;
+        transition: top 0.3s ease-in-out;
+      }
+      .navbar:hover,
+      .navbar:focus-within {
+        top: 0; /* Show the navbar on hover or when it contains focus */
+      }
+      .navbar a {
+        float: left;
+        display: block;
+        color: #00ff00;
+        text-align: center;
+        padding: 14px 16px;
+        text-decoration: none;
+        line-height: 22px;
+      }
+      .navbar a:hover {
+        background-color: #003300;
+        color: #00ff00;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="navbar">
+      <a href="secret.html">Secret</a>
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </div>
+    <canvas id="matrix-bg"></canvas>
+    <div class="content">
+      <h1>OpenAEye: Keep it open</h1>
+      <div id="game-area">
+        <img id="ai-eye" class="eye" src="openeye.png" alt="OpenAEye" />
+      </div>
+
+      <div id="score">Score: 0</div>
+      <div id="timer">Time: 30s</div>
+      <button id="start-button" style="margin-top: 5px">Start Game</button>
+      <div id="high-score">High Score: 0</div>
+    </div>
+
+    <script>
+      const aiEye = document.getElementById("ai-eye");
+      const scoreDisplay = document.getElementById("score");
+      const timerDisplay = document.getElementById("timer");
+      const highScoreDisplay = document.getElementById("high-score");
+      const startButton = document.getElementById("start-button");
+      const navbar = document.querySelector(".navbar");
+
+      let score = 0;
+      let timeLeft = 30;
+      let gameInterval;
+      let blinkInterval;
+      let highScore = parseInt(localStorage.getItem("highScore")) || 0;
+
+      // Show navbar when mouse is near the top of the screen
+      document.addEventListener("mousemove", (e) => {
+        if (e.clientY <= 10) {
+          navbar.style.top = "0";
+        } else if (e.clientY > 60) {
+          navbar.style.top = "-50px";
+        }
+      });
+
+      function updateHighScoreDisplay() {
+        highScoreDisplay.textContent = `High Score: ${highScore}`;
+      }
+
+      function resetGame() {
+        score = 0;
+        timeLeft = 30;
+        scoreDisplay.textContent = `Score: ${score}`;
+        timerDisplay.textContent = `Time: ${timeLeft}s`;
+        aiEye.src = "openeye.png";
+        clearInterval(gameInterval);
+        clearInterval(blinkInterval);
+      }
+
+      function startGame() {
+        resetGame();
+        startButton.disabled = true;
+        gameInterval = setInterval(updateGame, 1000);
+        blinkInterval = setInterval(tryToBlink, 200);
+      }
+
+      function updateGame() {
+        timeLeft--;
+        timerDisplay.textContent = `Time: ${timeLeft}s`;
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }
+
+      function endGame() {
+        clearInterval(gameInterval);
+        clearInterval(blinkInterval);
+        alert(`Game Over! Your score: ${score}`);
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem("highScore", highScore);
+          updateHighScoreDisplay();
+          alert("New High Score!");
+        }
+        startButton.disabled = false;
+      }
+
+      function tryToBlink() {
+        if (Math.random() < 0.1 && aiEye.src.includes("openeye.png")) {
+          blink();
+        }
+      }
+
+      function blink() {
+        aiEye.src = "closedeye.png";
+        setTimeout(() => {
+          if (aiEye.src.includes("closedeye.png")) {
+            aiEye.src = "openeye.png";
+          }
+        }, 300);
+      }
+
+      function keepOpen() {
+        if (aiEye.src.includes("closedeye.png")) {
+          aiEye.src = "openeye.png";
+          score += 10;
+          scoreDisplay.textContent = `Score: ${score}`;
+          showScoreEffect();
+        }
+      }
+
+      function showScoreEffect() {
+        aiEye.classList.add("score-effect");
+        setTimeout(() => {
+          aiEye.classList.remove("score-effect");
+        }, 500);
+      }
+
+      aiEye.addEventListener("mousedown", keepOpen);
+      startButton.addEventListener("click", startGame);
+
+      updateHighScoreDisplay();
+
+      // Matrix background
+      const canvas = document.getElementById("matrix-bg");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const katakana =
+        "アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン";
+      const latin = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const nums = "0123456789";
+
+      const alphabet = katakana + latin + nums;
+
+      const fontSize = 16;
+      const columns = canvas.width / fontSize;
+
+      const rainDrops = [];
+
+      for (let x = 0; x < columns; x++) {
+        rainDrops[x] = 1;
+      }
+
+      const draw = () => {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#0F0";
+        ctx.font = fontSize + "px monospace";
+
+        for (let i = 0; i < rainDrops.length; i++) {
+          const text = alphabet.charAt(
+            Math.floor(Math.random() * alphabet.length)
+          );
+          ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+          if (
+            rainDrops[i] * fontSize > canvas.height &&
+            Math.random() > 0.975
+          ) {
+            rainDrops[i] = 0;
+          }
+          rainDrops[i]++;
+        }
+      };
+
+      setInterval(draw, 30);
+    </script>
+  </body>
+</html>
